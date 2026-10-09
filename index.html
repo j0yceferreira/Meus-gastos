@@ -218,6 +218,24 @@ dialog::backdrop{background:rgba(22,38,31,.45);backdrop-filter:blur(2px)}
         <div id="peopleList"></div>
         <div class="hint">Quando você registrar um gasto, poderá escolher se ele é seu ou de uma dessas pessoas.</div>
       </div>
+
+      <div class="setting-section">
+        <div class="section-head">
+          <div><h2>💰 Renda mensal</h2><div class="mute">O quanto você recebe por mês, pra calcular o saldo.</div></div>
+        </div>
+        <label>Valor recebido por mês (R$)</label>
+        <input id="rendaValor" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0,00">
+        <div class="hint">Ex.: seu pró-labore/retirada como MEI. O saldo do mês considera esse valor recebido no mês inteiro.</div>
+        <div class="acts" style="justify-content:flex-start;margin-top:12px"><button class="pri" id="saveRenda">Salvar renda</button></div>
+      </div>
+
+      <div class="setting-section">
+        <div class="section-head">
+          <div><h2>📌 Custos fixos mensais</h2><div class="mute">Coisas que você paga todo mês (ex.: imposto MEI, internet). Entram sozinhas nos gastos.</div></div>
+          <button class="add-btn pri" id="addFixo">＋ Adicionar</button>
+        </div>
+        <div id="fixosList"></div>
+      </div>
     </div>
   </div>
 </section>
@@ -257,6 +275,23 @@ dialog::backdrop{background:rgba(22,38,31,.45);backdrop-filter:blur(2px)}
   <div class="acts"><button id="cardCancel">Cancelar</button><button class="pri" id="cardSave">Salvar cartão</button></div>
 </dialog>
 
+<dialog id="fixoDialog">
+  <h2 id="fixoDialogTitle">Novo custo fixo mensal</h2>
+  <input type="hidden" id="fixoEditIndex">
+  <label>Descrição</label>
+  <input id="fixoDesc" placeholder="Ex.: Imposto MEI, Internet, Seguro...">
+  <div class="two">
+    <div><label>Valor mensal (R$)</label><input id="fixoValor" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0,00"></div>
+    <div><label>Categoria</label><select id="fixoCat"></select></div>
+  </div>
+  <div class="two">
+    <div><label>Pago com</label><select id="fixoForma"></select></div>
+    <div><label>De quem é?</label><select id="fixoPessoa"></select></div>
+  </div>
+  <div class="hint">Entra automaticamente todo mês nos seus gastos (ou nos de quem você marcar), sem precisar lançar na mão.</div>
+  <div class="acts"><button id="fixoCancel">Cancelar</button><button class="pri" id="fixoSave">Salvar custo fixo</button></div>
+</dialog>
+
 <script type="module">
 // ====== 1) COLE AQUI A CONFIG DO SEU PROJETO FIREBASE (não é segredo; a proteção está nas regras) ======
 const firebaseConfig = {
@@ -281,9 +316,11 @@ if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "COLE_AQUI") { $('setup'
 
 const app = initializeApp(firebaseConfig), auth = getAuth(app), db = getFirestore(app);
 const DEFAULT_CFG = {
-  categorias: ["Alimentação","Gasolina","Internet","Financiamento da Moto","Moradia","Saúde","Lazer","Compras","Assinaturas","Educação","Transporte","Outros"],
+  categorias: ["Alimentação","Gasolina","Internet","Financiamento da Moto","Moradia","Saúde","Lazer","Compras","Assinaturas","Educação","Transporte","Impostos","Outros"],
   cartoes: [{nome:"Nubank Pessoal",anuidade:0,paga:""},{nome:"Nubank PJ",anuidade:0,paga:""},{nome:"Neon",anuidade:0,paga:""},{nome:"PicPay",anuidade:0,paga:""},{nome:"Mercado Pago",anuidade:0,paga:""},{nome:"DM",anuidade:0,paga:""},{nome:"Brasilcard",anuidade:0,paga:""}],
-  pessoas: []
+  pessoas: [],
+  renda: 0,
+  fixos: []
 };
 const OUTRAS_FORMAS = ["Pix","Débito / Dinheiro"];
 
@@ -359,8 +396,15 @@ function getMonthlyFees() {
     const fee=Number(c.anuidade)||0; if(fee<=0)return;
     const payer=String(c.paga||'').trim();
     const mine=!payer||/^(eu|mim)$/i.test(payer);
-    detalhes.push({cartao:c.nome,valor:fee,pessoa:mine?'':payer});
+    detalhes.push({desc:'Anuidade '+c.nome, cartao:c.nome, cat:'Anuidades', valor:fee, pessoa:mine?'':payer});
     if(mine) minha+=fee; else {terceiros+=fee; porPessoa[payer]=(porPessoa[payer]||0)+fee;}
+  });
+  (cfg.fixos||[]).forEach(f=>{
+    const val=Number(f.valor)||0; if(val<=0)return;
+    const payer=String(f.pessoa||'').trim();
+    const mine=!payer||/^(eu|mim)$/i.test(payer);
+    detalhes.push({desc:f.desc, cartao:f.forma||'—', cat:f.cat||'Outros', valor:val, pessoa:mine?'':payer});
+    if(mine) minha+=val; else {terceiros+=val; porPessoa[payer]=(porPessoa[payer]||0)+val;}
   });
   return {minha,terceiros,porPessoa,detalhes};
 }
@@ -369,14 +413,18 @@ function render() {
   const cat={},forma={},pessoa={}; let meus=0,terc=0;
   gastos.forEach(g=>{const v=Number(g.valor)||0;if(g.pessoa){terc+=v;pessoa[g.pessoa]=(pessoa[g.pessoa]||0)+v;}else{meus+=v;cat[g.cat]=(cat[g.cat]||0)+v;}forma[g.forma]=(forma[g.forma]||0)+v;});
   const fees=getMonthlyFees(); meus+=fees.minha; terc+=fees.terceiros;
-  if(fees.minha)cat['Anuidades']=(cat['Anuidades']||0)+fees.minha;
+  fees.detalhes.filter(f=>!f.pessoa).forEach(f=>cat[f.cat]=(cat[f.cat]||0)+f.valor);
   fees.detalhes.forEach(f=>forma[f.cartao]=(forma[f.cartao]||0)+f.valor);
   const total=meus+terc;
-  $('totais').innerHTML=`<div class="card"><div class="mute">Meus gastos</div><div class="big">${brl(meus)}</div></div><div class="card"><div class="mute">Gastos de terceiros no meu cartão</div><div class="big">${brl(terc)}</div></div><div class="card"><div class="mute">Total nas faturas e Pix</div><div class="big">${brl(total)}</div></div>`;
+  const renda=Number(cfg.renda)||0, saldo=renda-meus;
+  const saldoCard = renda>0
+    ? `<div class="card"><div class="mute">Quanto eu tenho ainda</div><div class="big" style="color:${saldo<0?'var(--red)':'var(--bar)'}">${brl(saldo)}</div><div class="mute" style="margin-top:4px">Renda ${brl(renda)} − meus gastos ${brl(meus)}</div></div>`
+    : `<div class="card"><div class="mute">Quanto eu tenho ainda</div><div class="big mute" style="font-size:15px">Cadastre sua renda mensal em Configurações</div></div>`;
+  $('totais').innerHTML=saldoCard+`<div class="card"><div class="mute">Meus gastos</div><div class="big">${brl(meus)}</div></div><div class="card"><div class="mute">Gastos de terceiros no meu cartão</div><div class="big">${brl(terc)}</div></div><div class="card"><div class="mute">Total nas faturas e Pix</div><div class="big">${brl(total)}</div></div>`;
   $('porCat').innerHTML=rank(cat,meus); $('porForma').innerHTML=rank(forma,total);
   const pl=Object.entries(pessoa).map(([p,v])=>`<div class="row"><div><span>${esc(p)} deve</span><b>${brl(v)}</b></div></div>`).join('');
-  const ft=Object.entries(fees.porPessoa).map(([p,v])=>`<div class="row"><div><span>${esc(p)} — anuidade</span><b>${brl(v)}</b></div></div>`).join('');
-  const fm=fees.minha?`<div class="row"><div><span>Minhas anuidades</span><b>${brl(fees.minha)}</b></div><div class="mute">Incluídas nos meus gastos</div></div>`:'';
+  const ft=Object.entries(fees.porPessoa).map(([p,v])=>`<div class="row"><div><span>${esc(p)} — custo fixo</span><b>${brl(v)}</b></div></div>`).join('');
+  const fm=fees.minha?`<div class="row"><div><span>Meus custos fixos (anuidades, impostos etc.)</span><b>${brl(fees.minha)}</b></div><div class="mute">Incluídos nos meus gastos</div></div>`:'';
   $('terceiros').innerHTML=(pl+ft+fm)||'<p class="mute">Sem gastos de terceiros ou anuidades neste mês.</p>';
   $('lista').innerHTML=gastos.length?gastos.map(g=>`<tr><td>${g.data.slice(8)}</td><td>${esc(g.desc)}</td><td><span class="tag">${esc(g.cat)}</span><span class="tag">${esc(g.forma)}</span>${g.pessoa?`<span class="tag t">${esc(g.pessoa)}</span>`:''}</td><td class="v">${brl(g.valor)}</td><td><button class="x" data-e="${g.id}">Editar</button><button class="x" data-d="${g.id}">Excluir</button></td></tr>`).join(''):'<tr><td colspan="5" class="mute">Nenhum lançamento neste mês. Toque em "Novo gasto".</td></tr>';
 }
@@ -485,13 +533,13 @@ function exportarPDF(tipo){
     let grand = 0;
     if(tipo==='meus'){
       const rows = gastos.filter(g=>!g.pessoa).map(g=>({dia:g.data.slice(8),desc:g.desc,cat:g.cat,forma:g.forma,valor:g.valor}));
-      fees.detalhes.filter(f=>!f.pessoa).forEach(f=>rows.push({dia:'—',desc:'Anuidade '+f.cartao,cat:'Anuidades',forma:f.cartao,valor:f.valor}));
+      fees.detalhes.filter(f=>!f.pessoa).forEach(f=>rows.push({dia:'—',desc:f.desc,cat:f.cat,forma:f.cartao,valor:f.valor}));
       if(!rows.length){ doc.setFontSize(11); doc.text('Nenhum gasto pessoal neste mês.',14,y); }
       else grand = linhas(rows);
     } else {
       const porPessoa = {};
       gastos.filter(g=>!!g.pessoa).forEach(g=>{ (porPessoa[g.pessoa]=porPessoa[g.pessoa]||[]).push({dia:g.data.slice(8),desc:g.desc,cat:g.cat,forma:g.forma,valor:g.valor}); });
-      fees.detalhes.filter(f=>!!f.pessoa).forEach(f=>{ (porPessoa[f.pessoa]=porPessoa[f.pessoa]||[]).push({dia:'—',desc:'Anuidade '+f.cartao,cat:'Anuidades',forma:f.cartao,valor:f.valor}); });
+      fees.detalhes.filter(f=>!!f.pessoa).forEach(f=>{ (porPessoa[f.pessoa]=porPessoa[f.pessoa]||[]).push({dia:'—',desc:f.desc,cat:f.cat,forma:f.cartao,valor:f.valor}); });
       const nomes = Object.keys(porPessoa).sort();
       if(!nomes.length){ doc.setFontSize(11); doc.text('Nenhum gasto de terceiros neste mês.',14,y); }
       nomes.forEach(nome=>{ if(y>265){ doc.addPage(); y=18; } grand += linhas(porPessoa[nome], nome); });
@@ -529,6 +577,21 @@ function renderSettings() {
       <input data-person-rename="${i}" value="${esc(p)}" style="flex:1">
       <button class="small-btn danger" data-del-person="${i}">Excluir</button>
     </div>`).join('') || '<p class="empty">Nenhuma pessoa cadastrada.</p>';
+
+  $('rendaValor').value = cfg.renda || '';
+
+  $('fixosList').innerHTML = (cfg.fixos || []).map((f, i) => `
+    <div class="setting-item setting-card">
+      <div>
+        <strong>${esc(f.desc)}</strong>
+        <span class="setting-detail">${brl(f.valor)}/mês · ${esc(f.cat||'Outros')} · ${esc(f.forma||'—')}</span>
+        <span class="setting-detail">${f.pessoa ? 'Pago por ' + esc(f.pessoa) : 'É meu'}</span>
+      </div>
+      <div class="item-actions">
+        <button class="small-btn" data-edit-fixo="${i}">Editar</button>
+        <button class="small-btn danger" data-del-fixo="${i}">Excluir</button>
+      </div>
+    </div>`).join('') || '<p class="empty">Nenhum custo fixo cadastrado.</p>';
 }
 
 async function saveCfg(next) {
@@ -614,6 +677,55 @@ $('cardSave').onclick = async () => {
   if (idx < 0) cards.push(item); else cards[idx] = item;
   await saveCfg({...cfg, cartoes:cards});
   $('cardDialog').close();
+};
+
+$('saveRenda').onclick = async () => {
+  const renda = parseFloat(String($('rendaValor').value).replace(',','.')) || 0;
+  await saveCfg({...cfg, renda});
+};
+
+$('addFixo').onclick = () => {
+  $('fixoEditIndex').value = '';
+  $('fixoDesc').value = ''; $('fixoValor').value = '';
+  $('fixoCat').innerHTML = opts(cfg.categorias, '');
+  $('fixoForma').innerHTML = opts([...cfg.cartoes.map(c => c.nome), ...OUTRAS_FORMAS], '');
+  $('fixoPessoa').innerHTML = opts(['Eu', ...(cfg.pessoas||[])], 'Eu');
+  $('fixoDialogTitle').textContent = 'Novo custo fixo mensal';
+  $('fixoDialog').showModal();
+};
+
+$('fixosList').onclick = async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const i = Number(b.dataset.editFixo ?? b.dataset.delFixo);
+  const fixos = [...(cfg.fixos || [])];
+  if (b.dataset.editFixo !== undefined) {
+    const f = fixos[i];
+    $('fixoEditIndex').value = i;
+    $('fixoDesc').value = f.desc || '';
+    $('fixoValor').value = f.valor || '';
+    $('fixoCat').innerHTML = opts(cfg.categorias, f.cat);
+    $('fixoForma').innerHTML = opts([...cfg.cartoes.map(c => c.nome), ...OUTRAS_FORMAS], f.forma);
+    $('fixoPessoa').innerHTML = opts(['Eu', ...(cfg.pessoas||[])], f.pessoa || 'Eu');
+    $('fixoDialogTitle').textContent = 'Editar custo fixo';
+    $('fixoDialog').showModal();
+  } else {
+    if (!confirm(`Excluir "${fixos[i].desc}"? Ele deixa de entrar nos próximos meses.`)) return;
+    fixos.splice(i,1);
+    await saveCfg({...cfg, fixos});
+  }
+};
+
+$('fixoCancel').onclick = () => $('fixoDialog').close();
+$('fixoSave').onclick = async () => {
+  const desc = $('fixoDesc').value.trim();
+  const valor = parseFloat(String($('fixoValor').value).replace(',','.')) || 0;
+  if (!desc || !(valor > 0)) return alert('Informe a descrição e o valor.');
+  const item = { desc, valor, cat: $('fixoCat').value, forma: $('fixoForma').value, pessoa: $('fixoPessoa').value === 'Eu' ? '' : $('fixoPessoa').value };
+  const fixos = [...(cfg.fixos || [])];
+  const idx = $('fixoEditIndex').value === '' ? -1 : Number($('fixoEditIndex').value);
+  if (idx < 0) fixos.push(item); else fixos[idx] = item;
+  await saveCfg({...cfg, fixos});
+  $('fixoDialog').close();
 };
 
 $('addPerson').onclick = async () => {
