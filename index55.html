@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meus Gastos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f4ee;--card:#fff;--ink:#16261f;--mute:#7a8880;--line:#e7e2d4;
+  --acc:#c08a3e;--acc2:#a36f2b;--bar:#1f7a63;--bar2:#145c49;--red:#c1442c;--soft:#eef2ec;
+  --shadow:0 1px 2px rgba(22,38,31,.05),0 10px 28px rgba(22,38,31,.07);
+  --shadow-sm:0 1px 2px rgba(22,38,31,.06);
+  --radius:18px;--radius-sm:12px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:
+  radial-gradient(1200px 500px at 10% -10%, #eef7f1 0%, transparent 60%),
+  radial-gradient(900px 400px at 110% 0%, #fbf1e2 0%, transparent 55%),
+  var(--bg);
+  color:var(--ink);font:15px/1.55 'DM Sans',system-ui,sans-serif;padding:22px;max-width:1120px;margin-inline:auto}
+h1,h2,h3{font-family:'Bricolage Grotesque',sans-serif;margin:0;letter-spacing:-.01em}
+h1{font-size:27px} h2{font-size:18px;margin-bottom:10px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 15px;cursor:pointer;font-weight:600;box-shadow:var(--shadow-sm);transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease,background .12s ease}
+button:hover{border-color:#c9d3c9;transform:translateY(-1px);box-shadow:var(--shadow)}
+button:active{transform:translateY(0)}
+button.pri{background:linear-gradient(135deg,var(--bar),var(--bar2));color:#fff;border-color:transparent;font-weight:700;box-shadow:0 6px 16px rgba(31,122,99,.28)}
+button.pri:hover{box-shadow:0 10px 22px rgba(31,122,99,.34)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+input,select,textarea{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 12px;width:100%;transition:border-color .12s ease,box-shadow .12s ease}
+input:hover,select:hover{border-color:#c9d3c9}
+label{display:block;font-size:12.5px;font-weight:600;color:var(--mute);text-transform:uppercase;letter-spacing:.04em;margin:13px 0 5px}
+.hide{display:none!important}
+.mute{color:var(--mute);font-size:13px}
+header{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;margin-bottom:22px}
+.brand{display:flex;align-items:center;gap:13px}
+.brand-mark{width:44px;height:44px;border-radius:13px;background:linear-gradient(135deg,var(--bar),var(--bar2));color:#fff;display:grid;place-items:center;font-weight:700;box-shadow:0 8px 18px rgba(31,122,99,.35)}
+.month-nav{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px;box-shadow:var(--shadow-sm);width:fit-content;margin-bottom:16px}
+.month-nav button{border-radius:999px;padding:6px 12px;box-shadow:none}
+.month-nav b{font-family:'Bricolage Grotesque';font-size:18px;min-width:170px;text-align:center;text-transform:capitalize}
+.header-actions{display:flex;gap:9px;flex-wrap:wrap}
+.grid{display:grid;gap:14px}
+.tot{grid-template-columns:repeat(auto-fit,minmax(210px,1fr));margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:19px;box-shadow:var(--shadow-sm);transition:box-shadow .15s ease}
+.tot .card{position:relative;overflow:hidden}
+.tot .card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--bar),var(--acc))}
+.big{font:700 29px 'Bricolage Grotesque';margin-top:4px}
+.cols{grid-template-columns:repeat(auto-fit,minmax(320px,1fr));margin-bottom:14px}
+.row{margin:11px 0}
+.row>div:first-child{display:flex;justify-content:space-between;gap:8px}
+.track{height:7px;background:var(--soft);border-radius:5px;margin-top:6px;overflow:hidden}
+.fill{height:100%;background:var(--bar);border-radius:5px}
+.row:first-child .fill{background:var(--acc)}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:11px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--mute);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em}
+tbody tr{transition:background .12s ease}
+tbody tr:hover{background:var(--soft)}
+td.v{text-align:right;white-space:nowrap;font-weight:600}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius-sm)}
+.tbl table{min-width:560px}
+.tag{display:inline-block;font-size:11.5px;font-weight:600;background:var(--soft);color:var(--ink);border-radius:999px;padding:3px 10px;margin:2px 4px 2px 0}
+.tag.t{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff}
+dialog{border:none;border-radius:20px;background:var(--card);color:var(--ink);width:min(470px,94vw);padding:24px;box-shadow:0 24px 70px rgba(22,38,31,.25)}
+dialog::backdrop{background:rgba(22,38,31,.45);backdrop-filter:blur(2px)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.acts{display:flex;gap:9px;justify-content:flex-end;margin-top:20px}
+.x{background:none;border:0;color:var(--mute);padding:4px 7px;box-shadow:none;font-weight:500}
+.x:hover{color:var(--ink);transform:none;box-shadow:none}
+#login,#setup{text-align:center;margin:12vh auto;max-width:420px}
+#login .card{text-align:left;box-shadow:var(--shadow)}
+.login-title{text-align:center}
+.settings-page{position:fixed;inset:0;background:var(--bg);z-index:20;overflow:auto;padding:22px}
+.settings-wrap{max-width:900px;margin:0 auto}
+.settings-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}
+.back{display:flex;align-items:center;gap:7px;background:transparent;border:0;padding:6px 0;box-shadow:none;font-weight:600}
+.back:hover{transform:none;box-shadow:none;opacity:.7}
+.settings-intro{background:linear-gradient(135deg,var(--soft),#f8f1e4);border:1px solid var(--line);border-radius:var(--radius);padding:17px;margin-bottom:16px}
+.settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.setting-section{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:19px;box-shadow:var(--shadow-sm)}
+.section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px}
+.add-btn{font-size:13px;padding:8px 12px;white-space:nowrap}
+.setting-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.setting-item:first-child{border-top:0}
+.setting-item input{box-shadow:none;padding:8px 10px}
+.setting-card{align-items:flex-start}
+.item-actions{display:flex;gap:5px;flex-shrink:0}
+.small-btn{font-size:12px;padding:6px 9px;background:transparent;box-shadow:none}
+.small-btn:hover{box-shadow:none;background:var(--soft);transform:none}
+.small-btn.danger{color:var(--red)}
+.setting-detail{display:block;color:var(--mute);font-size:12px;margin-top:3px}
+.empty{color:var(--mute);font-size:13px;margin:8px 0}
+.hint{font-size:12px;color:var(--mute);margin-top:8px}
+@media(max-width:600px){
+ body{padding:14px}
+ .month-nav{width:100%;justify-content:space-between}
+ .month-nav b{min-width:0;font-size:17px}
+ .header-actions{width:100%}
+ .header-actions button{flex:1}
+ .two{grid-template-columns:1fr}
+ .settings-page{padding:14px}
+}
+</style>
+</head>
+<body>
+
+<div id="setup" class="card hide">
+  <h2>Configuração necessária</h2>
+  <p class="mute">O Firebase ainda não está configurado neste arquivo.</p>
+</div>
+
+<div id="login" class="hide">
+  <div class="card">
+    <div class="login-title">
+      <div class="brand-mark" style="margin:0 auto 12px">R$</div>
+      <h1>Meus Gastos</h1>
+      <p class="mute">Entre para acessar seus lançamentos.</p>
+    </div>
+    <label for="loginEmail">E-mail</label>
+    <input id="loginEmail" type="email" autocomplete="username" placeholder="seu@email.com">
+    <label for="loginPassword">Senha</label>
+    <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Sua senha">
+    <div class="acts" style="justify-content:stretch">
+      <button class="pri" id="btnLogin" style="width:100%">Entrar</button>
+    </div>
+    <div style="text-align:center;margin-top:8px"><button class="x" id="btnReset" type="button">Esqueci minha senha</button></div>
+  </div>
+</div>
+
+<main id="app" class="hide">
+  <header>
+    <div class="brand">
+      <div class="brand-mark">R$</div>
+      <div>
+        <h1>Meus Gastos</h1>
+        <div class="mute">Controle financeiro mensal</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="pri" id="novo">＋ Novo gasto</button>
+      <button id="openSettings">⚙ Configurações</button>
+      <button id="sair">Sair</button>
+    </div>
+  </header>
+
+  <div class="month-nav" style="margin-bottom:14px">
+    <button id="prev" aria-label="Mês anterior">‹</button>
+    <b id="mesLabel"></b>
+    <button id="next" aria-label="Próximo mês">›</button>
+  </div>
+
+  <section class="grid tot" id="totais"></section>
+
+  <section class="card" style="margin-bottom:14px">
+    <h2>Exportar este mês</h2>
+    <div class="mute" style="margin-bottom:10px">Gera um PDF separado — útil pra mandar pra quem te deve e cobrar certinho.</div>
+    <div class="header-actions">
+      <button id="exportMeus">⬇ Meus gastos (PDF)</button>
+      <button id="exportTerceiros">⬇ Gastos de terceiros (PDF)</button>
+    </div>
+  </section>
+
+  <section class="grid cols">
+    <div class="card"><h2>Onde estou gastando</h2><div class="mute" style="margin-bottom:8px">Categorias com maior gasto aparecem primeiro.</div><div id="porCat"></div></div>
+    <div class="grid" style="align-content:start">
+      <div class="card"><h2>Por forma de pagamento</h2><div id="porForma"></div></div>
+      <div class="card"><h2>Terceiros e anuidades</h2><div id="terceiros"></div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px">
+      <div><h2>Lançamentos</h2><div class="mute">Tudo o que foi lançado neste mês.</div></div>
+      <button class="pri" id="novo2">＋ Novo</button>
+    </div>
+    <div class="tbl"><table><thead><tr><th>Dia</th><th>Descrição</th><th>Categoria / pagamento</th><th style="text-align:right">Valor</th><th></th></tr></thead><tbody id="lista"></tbody></table></div>
+  </section>
+</main>
+
+<!-- Tela de configurações -->
+<section id="settingsView" class="settings-page hide">
+  <div class="settings-wrap">
+    <div class="settings-head">
+      <button class="back" id="closeSettings">← Voltar para meus gastos</button>
+      <h1>Configurações</h1>
+      <span style="width:110px"></span>
+    </div>
+
+    <div class="settings-intro">
+      <strong>Personalize seu controle</strong>
+      <div class="mute">Aqui você cadastra as categorias, cartões e pessoas que aparecem quando você registra um gasto. Não precisa preencher códigos ou formatos especiais.</div>
+    </div>
+
+    <div class="settings-grid">
+      <div class="setting-section">
+        <div class="section-head">
+          <div><h2>🏷 Categorias</h2><div class="mute">Tipos de gastos que você acompanha.</div></div>
+          <button class="add-btn pri" id="addCategory">＋ Adicionar</button>
+        </div>
+        <div id="catsList"></div>
+      </div>
+
+      <div class="setting-section">
+        <div class="section-head">
+          <div><h2>💳 Cartões</h2><div class="mute">Cartões disponíveis no cadastro de gastos.</div></div>
+          <button class="add-btn pri" id="addCard">＋ Adicionar</button>
+        </div>
+        <div id="cardsList"></div>
+      </div>
+
+      <div class="setting-section">
+        <div class="section-head">
+          <div><h2>👥 Pessoas</h2><div class="mute">Quem pode ter gastos no seu cartão.</div></div>
+          <button class="add-btn pri" id="addPerson">＋ Adicionar</button>
+        </div>
+        <div id="peopleList"></div>
+        <div class="hint">Quando você registrar um gasto, poderá escolher se ele é seu ou de uma dessas pessoas.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<dialog id="dlgGasto">
+  <h2 id="dlgTitulo">Novo gasto</h2>
+  <label>O que você comprou ou pagou?</label><input id="fDesc" placeholder="Ex.: Mercado, gasolina, internet...">
+  <div class="two">
+    <div><label>Valor total (R$)</label><input id="fValor" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0,00"></div>
+    <div><label>Data</label><input id="fData" type="date"></div>
+  </div>
+  <div class="two">
+    <div><label>Categoria</label><select id="fCat"></select></div>
+    <div><label>Pago com</label><select id="fForma"></select></div>
+  </div>
+  <div class="two">
+    <div><label>De quem é o gasto?</label><select id="fPessoa"></select></div>
+    <div><label>Parcelas</label><input id="fParc" type="number" min="1" value="1"></div>
+  </div>
+  <div id="fGrupoWrap" class="hide" style="display:flex;align-items:center;gap:8px;margin-top:14px">
+    <input type="checkbox" id="fAplicarGrupo" style="width:auto">
+    <label for="fAplicarGrupo" style="margin:0;text-transform:none;font-size:13px;color:var(--ink);font-weight:500">Aplicar categoria, pagamento e pessoa a <span id="fGrupoCount"></span> parcelas deste lançamento (valor e data de cada mês não mudam)</label>
+  </div>
+  <div class="acts"><button id="fCancel">Cancelar</button><button class="pri" id="fSalvar">Salvar gasto</button></div>
+</dialog>
+
+<dialog id="cardDialog">
+  <h2 id="cardDialogTitle">Adicionar cartão</h2>
+  <input type="hidden" id="cardEditIndex">
+  <label>Nome do cartão</label>
+  <input id="cardName" placeholder="Ex.: Nubank Pessoal">
+  <label>Anuidade mensal</label>
+  <input id="cardFee" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0,00">
+  <div class="hint">Se não houver anuidade, deixe R$ 0,00.</div>
+  <label>Quem paga a anuidade?</label>
+  <input id="cardPayer" placeholder="Deixe vazio se sou eu">
+  <div class="acts"><button id="cardCancel">Cancelar</button><button class="pri" id="cardSave">Salvar cartão</button></div>
+</dialog>
+
+<script type="module">
+// ====== 1) COLE AQUI A CONFIG DO SEU PROJETO FIREBASE (não é segredo; a proteção está nas regras) ======
+const firebaseConfig = {
+  apiKey: "AIzaSyB2vvsNCAexypl3clhj_gMw8Wr3LXYUX5c",
+  authDomain: "controledefinancaspessoa-1dff7.firebaseapp.com",
+  projectId: "controledefinancaspessoa-1dff7",
+  storageBucket: "controledefinancaspessoa-1dff7.firebasestorage.app",
+  messagingSenderId: "297797774339",
+  appId: "1:297797774339:web:0be01a025c30df6fb3b236"
+};
+// ==========================================================================================================
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, doc, onSnapshot, setDoc, addDoc, deleteDoc, query, where, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const $ = id => document.getElementById(id);
+const brl = n => (n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "COLE_AQUI") { $('setup').classList.remove('hide'); throw new Error('Firebase não configurado'); }
+
+const app = initializeApp(firebaseConfig), auth = getAuth(app), db = getFirestore(app);
+const DEFAULT_CFG = {
+  categorias: ["Alimentação","Gasolina","Internet","Financiamento da Moto","Moradia","Saúde","Lazer","Compras","Assinaturas","Educação","Transporte","Outros"],
+  cartoes: [{nome:"Nubank Pessoal",anuidade:0,paga:""},{nome:"Nubank PJ",anuidade:0,paga:""},{nome:"Neon",anuidade:0,paga:""},{nome:"PicPay",anuidade:0,paga:""},{nome:"Mercado Pago",anuidade:0,paga:""},{nome:"DM",anuidade:0,paga:""},{nome:"Brasilcard",anuidade:0,paga:""}],
+  pessoas: []
+};
+const OUTRAS_FORMAS = ["Pix","Débito / Dinheiro"];
+
+let uid, cfg = DEFAULT_CFG, gastos = [], mes = new Date().toISOString().slice(0,7), editId = null, unsub = null;
+
+$('btnLogin').onclick = async () => {
+  const email = $('loginEmail').value.trim();
+  const password = $('loginPassword').value;
+  if (!email || !password) return alert('Informe seu e-mail e sua senha.');
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    $('loginPassword').value = '';
+  } catch (e) {
+    const mensagens = {
+      'auth/invalid-credential': 'E-mail ou senha incorretos.',
+      'auth/invalid-email': 'Informe um e-mail válido.',
+      'auth/user-disabled': 'Este usuário está desativado.',
+      'auth/too-many-requests': 'Muitas tentativas. Tente novamente mais tarde.'
+    };
+    alert(mensagens[e.code] || 'Não foi possível entrar: ' + e.message);
+  }
+};
+
+$('btnReset').onclick = async () => {
+  const email = $('loginEmail').value.trim();
+  if (!email) return alert('Digite seu e-mail primeiro.');
+  try {
+    await sendPasswordResetEmail(auth, email);
+    alert('Enviamos um link para redefinir sua senha para esse e-mail.');
+  } catch (e) {
+    alert('Não foi possível enviar o e-mail de redefinição: ' + e.message);
+  }
+};
+
+$('sair').onclick = () => signOut(auth);
+
+onAuthStateChanged(auth, user => {
+  $('login').classList.toggle('hide', !!user);
+  $('app').classList.toggle('hide', !user);
+  if (unsub) { unsub(); unsub = null; }
+  if (!user) return;
+  uid = user.uid;
+  const un1 = onSnapshot(doc(db,'users',uid,'config','main'), s => {
+    if (s.exists()) cfg = {...DEFAULT_CFG, ...s.data()}; else setDoc(doc(db,'users',uid,'config','main'), DEFAULT_CFG);
+    render();
+  });
+  watchMes();
+  const prev = unsub; unsub = () => { un1(); prev && prev(); };
+});
+
+let unsubMes = null;
+function watchMes() {
+  if (unsubMes) unsubMes();
+  unsubMes = onSnapshot(query(collection(db,'users',uid,'gastos'), where('mes','==',mes)), s => {
+    gastos = s.docs.map(d => ({id:d.id, ...d.data()})).sort((a,b) => b.data.localeCompare(a.data));
+    render();
+  }, e => alert('Erro ao ler dados: ' + e.message));
+}
+
+const shift = n => { const [y,m] = mes.split('-').map(Number); const d = new Date(y,m-1+n,15); mes = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); watchMes(); };
+$('prev').onclick = () => shift(-1);
+$('next').onclick = () => shift(1);
+
+function rank(map, total) {
+  const rows = Object.entries(map).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1]);
+  if (!rows.length) return '<p class="mute">Nada lançado ainda.</p>';
+  return rows.map(([k,v]) => `<div class="row"><div><span>${esc(k)}</span><b>${brl(v)} <span class="mute">${total ? Math.round(v/total*100) : 0}%</span></b></div><div class="track"><div class="fill" style="width:${total ? v/total*100 : 0}%"></div></div></div>`).join('');
+}
+
+function getMonthlyFees() {
+  let minha=0, terceiros=0; const porPessoa={}, detalhes=[];
+  (cfg.cartoes||[]).forEach(c=>{
+    const fee=Number(c.anuidade)||0; if(fee<=0)return;
+    const payer=String(c.paga||'').trim();
+    const mine=!payer||/^(eu|mim)$/i.test(payer);
+    detalhes.push({cartao:c.nome,valor:fee,pessoa:mine?'':payer});
+    if(mine) minha+=fee; else {terceiros+=fee; porPessoa[payer]=(porPessoa[payer]||0)+fee;}
+  });
+  return {minha,terceiros,porPessoa,detalhes};
+}
+function render() {
+  const [y,m]=mes.split('-'); $('mesLabel').textContent=new Date(y,m-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  const cat={},forma={},pessoa={}; let meus=0,terc=0;
+  gastos.forEach(g=>{const v=Number(g.valor)||0;if(g.pessoa){terc+=v;pessoa[g.pessoa]=(pessoa[g.pessoa]||0)+v;}else{meus+=v;cat[g.cat]=(cat[g.cat]||0)+v;}forma[g.forma]=(forma[g.forma]||0)+v;});
+  const fees=getMonthlyFees(); meus+=fees.minha; terc+=fees.terceiros;
+  if(fees.minha)cat['Anuidades']=(cat['Anuidades']||0)+fees.minha;
+  fees.detalhes.forEach(f=>forma[f.cartao]=(forma[f.cartao]||0)+f.valor);
+  const total=meus+terc;
+  $('totais').innerHTML=`<div class="card"><div class="mute">Meus gastos</div><div class="big">${brl(meus)}</div></div><div class="card"><div class="mute">Gastos de terceiros no meu cartão</div><div class="big">${brl(terc)}</div></div><div class="card"><div class="mute">Total nas faturas e Pix</div><div class="big">${brl(total)}</div></div>`;
+  $('porCat').innerHTML=rank(cat,meus); $('porForma').innerHTML=rank(forma,total);
+  const pl=Object.entries(pessoa).map(([p,v])=>`<div class="row"><div><span>${esc(p)} deve</span><b>${brl(v)}</b></div></div>`).join('');
+  const ft=Object.entries(fees.porPessoa).map(([p,v])=>`<div class="row"><div><span>${esc(p)} — anuidade</span><b>${brl(v)}</b></div></div>`).join('');
+  const fm=fees.minha?`<div class="row"><div><span>Minhas anuidades</span><b>${brl(fees.minha)}</b></div><div class="mute">Incluídas nos meus gastos</div></div>`:'';
+  $('terceiros').innerHTML=(pl+ft+fm)||'<p class="mute">Sem gastos de terceiros ou anuidades neste mês.</p>';
+  $('lista').innerHTML=gastos.length?gastos.map(g=>`<tr><td>${g.data.slice(8)}</td><td>${esc(g.desc)}</td><td><span class="tag">${esc(g.cat)}</span><span class="tag">${esc(g.forma)}</span>${g.pessoa?`<span class="tag t">${esc(g.pessoa)}</span>`:''}</td><td class="v">${brl(g.valor)}</td><td><button class="x" data-e="${g.id}">Editar</button><button class="x" data-d="${g.id}">Excluir</button></td></tr>`).join(''):'<tr><td colspan="5" class="mute">Nenhum lançamento neste mês. Toque em "Novo gasto".</td></tr>';
+}
+
+$('lista').onclick = async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.e) abrirGasto(gastos.find(g => g.id === b.dataset.e));
+  if (b.dataset.d && confirm('Excluir este lançamento?')) await deleteDoc(doc(db,'users',uid,'gastos',b.dataset.d));
+};
+
+const opts = (arr, sel) => arr.map(v => `<option${v === sel ? ' selected' : ''}>${esc(v)}</option>`).join('');
+function abrirGasto(g) {
+  editId = g ? g.id : null;
+  $('dlgTitulo').textContent = g ? 'Editar gasto' : 'Novo gasto';
+  $('fDesc').value = g?.desc || '';
+  $('fValor').value = g?.valor || '';
+  $('fData').value = g?.data || (mes === new Date().toISOString().slice(0,7) ? new Date().toISOString().slice(0,10) : mes + '-01');
+  $('fCat').innerHTML = opts(cfg.categorias, g?.cat);
+  $('fForma').innerHTML = opts([...cfg.cartoes.map(c => c.nome), ...OUTRAS_FORMAS], g?.forma);
+  $('fPessoa').innerHTML = opts(['Eu', ...(cfg.pessoas||[])], g?.pessoa || 'Eu');
+  $('fParc').value = 1; $('fParc').disabled = !!g;
+  if (g && g.grupo) {
+    $('fGrupoWrap').classList.remove('hide');
+    $('fGrupoCount').textContent = g.parcelasTotal || 'todas as';
+    $('fAplicarGrupo').checked = false;
+  } else {
+    $('fGrupoWrap').classList.add('hide');
+    $('fAplicarGrupo').checked = false;
+  }
+  $('dlgGasto').showModal();
+}
+$('novo').onclick = () => abrirGasto();
+$('novo2').onclick = () => abrirGasto();
+$('fCancel').onclick = () => $('dlgGasto').close();
+
+$('fSalvar').onclick = async () => {
+  const valor = parseFloat($('fValor').value), desc = $('fDesc').value.trim(), data = $('fData').value;
+  if (!desc || !(valor > 0) || !data) return alert('Preencha descrição, valor e data.');
+  const base = { desc, cat: $('fCat').value, forma: $('fForma').value, pessoa: $('fPessoa').value === 'Eu' ? '' : $('fPessoa').value };
+  const n = Math.max(1, parseInt($('fParc').value) || 1);
+  try {
+    if (editId) {
+      await setDoc(doc(db,'users',uid,'gastos',editId), {...base, valor, data, mes: data.slice(0,7)}, {merge:true});
+      if ($('fAplicarGrupo').checked) {
+        const gOrig = gastos.find(g => g.id === editId);
+        if (gOrig && gOrig.grupo) {
+          const snap = await getDocs(query(collection(db,'users',uid,'gastos'), where('grupo','==', gOrig.grupo)));
+          const b = writeBatch(db);
+          snap.forEach(d => { if (d.id !== editId) b.update(d.ref, {cat: base.cat, forma: base.forma, pessoa: base.pessoa}); });
+          await b.commit();
+        }
+      }
+    } else {
+      const b = writeBatch(db), [y,m,d] = data.split('-').map(Number);
+      const grupo = n > 1 ? (crypto.randomUUID ? crypto.randomUUID() : (Date.now()+'-'+Math.random().toString(36).slice(2))) : null;
+      for (let i = 0; i < n; i++) {
+        const dt = new Date(y, m-1+i, Math.min(d, 28));
+        const iso = dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(i ? dt.getDate() : d).padStart(2,'0');
+        const item = {...base, desc: n > 1 ? `${desc} (${i+1}/${n})` : desc, valor: Math.round(valor/n*100)/100, data: iso, mes: iso.slice(0,7)};
+        if (grupo) { item.grupo = grupo; item.parcelasTotal = n; }
+        b.set(doc(collection(db,'users',uid,'gastos')), item);
+      }
+      await b.commit();
+    }
+    $('dlgGasto').close();
+  } catch (e) { alert('Erro ao salvar: ' + e.message); }
+};
+
+// ===== Exportação em PDF (sem dependências extras, só o jsPDF base) =====
+function exportarPDF(tipo){
+  if(!window.jspdf){ alert('O gerador de PDF ainda está carregando, tente de novo em instantes.'); return; }
+  try{
+    const { jsPDF } = window.jspdf;
+    const fees = getMonthlyFees();
+    const [yy,mm] = mes.split('-'); const label = new Date(yy,mm-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+    const doc = new jsPDF();
+    let y = 18;
+    doc.setFontSize(16); doc.text(tipo==='meus' ? 'Meus gastos' : 'Gastos de terceiros (a cobrar)', 14, y); y += 7;
+    doc.setFontSize(10); doc.text(label + ' · gerado em ' + new Date().toLocaleDateString('pt-BR'), 14, y); y += 10;
+
+    function linhas(rows, subtitulo){
+      if(subtitulo){ doc.setFontSize(12); doc.text(subtitulo, 14, y); y += 6; }
+      doc.setFontSize(9);
+      doc.text('Dia',14,y); doc.text('Descrição',32,y); doc.text('Categoria',100,y); doc.text('Pagamento',140,y); doc.text('Valor',180,y);
+      y += 4; doc.line(14,y,196,y); y += 5;
+      let subtotal = 0;
+      rows.forEach(r=>{
+        if(y>280){ doc.addPage(); y=18; }
+        doc.text(String(r.dia||'—'),14,y);
+        doc.text(String(r.desc||'').slice(0,34),32,y);
+        doc.text(String(r.cat||'').slice(0,22),100,y);
+        doc.text(String(r.forma||'').slice(0,16),140,y);
+        doc.text(brl(r.valor),180,y);
+        subtotal += Number(r.valor)||0; y += 6;
+      });
+      y += 2; doc.setFontSize(10); doc.text('Subtotal: ' + brl(subtotal), 14, y); y += 10;
+      return subtotal;
+    }
+
+    let grand = 0;
+    if(tipo==='meus'){
+      const rows = gastos.filter(g=>!g.pessoa).map(g=>({dia:g.data.slice(8),desc:g.desc,cat:g.cat,forma:g.forma,valor:g.valor}));
+      fees.detalhes.filter(f=>!f.pessoa).forEach(f=>rows.push({dia:'—',desc:'Anuidade '+f.cartao,cat:'Anuidades',forma:f.cartao,valor:f.valor}));
+      if(!rows.length){ doc.setFontSize(11); doc.text('Nenhum gasto pessoal neste mês.',14,y); }
+      else grand = linhas(rows);
+    } else {
+      const porPessoa = {};
+      gastos.filter(g=>!!g.pessoa).forEach(g=>{ (porPessoa[g.pessoa]=porPessoa[g.pessoa]||[]).push({dia:g.data.slice(8),desc:g.desc,cat:g.cat,forma:g.forma,valor:g.valor}); });
+      fees.detalhes.filter(f=>!!f.pessoa).forEach(f=>{ (porPessoa[f.pessoa]=porPessoa[f.pessoa]||[]).push({dia:'—',desc:'Anuidade '+f.cartao,cat:'Anuidades',forma:f.cartao,valor:f.valor}); });
+      const nomes = Object.keys(porPessoa).sort();
+      if(!nomes.length){ doc.setFontSize(11); doc.text('Nenhum gasto de terceiros neste mês.',14,y); }
+      nomes.forEach(nome=>{ if(y>265){ doc.addPage(); y=18; } grand += linhas(porPessoa[nome], nome); });
+    }
+    doc.setFontSize(12); doc.text('Total geral: ' + brl(grand), 14, y);
+    doc.save((tipo==='meus' ? 'meus-gastos-' : 'gastos-terceiros-') + mes + '.pdf');
+  }catch(e){ console.error(e); alert('Não foi possível gerar o PDF. Recarregue a página e tente novamente.'); }
+}
+$('exportMeus').onclick=()=>exportarPDF('meus');
+$('exportTerceiros').onclick=()=>exportarPDF('terceiros');
+
+// ===== Configurações intuitivas (edição direta na linha, sem pop-ups) =====
+function renderSettings() {
+  $('catsList').innerHTML = (cfg.categorias || []).map((c, i) => `
+    <div class="setting-item">
+      <input data-cat-rename="${i}" value="${esc(c)}" style="flex:1">
+      <button class="small-btn danger" data-del-cat="${i}">Excluir</button>
+    </div>`).join('') || '<p class="empty">Nenhuma categoria cadastrada.</p>';
+
+  $('cardsList').innerHTML = (cfg.cartoes || []).map((c, i) => `
+    <div class="setting-item setting-card">
+      <div>
+        <strong>${esc(c.nome)}</strong>
+        <span class="setting-detail">${c.anuidade > 0 ? 'Anuidade: ' + brl(c.anuidade) + '/mês' : 'Sem anuidade'}</span>
+        <span class="setting-detail">${c.paga ? 'Anuidade paga por ' + esc(c.paga) : 'Anuidade paga por mim'}</span>
+      </div>
+      <div class="item-actions">
+        <button class="small-btn" data-edit-card="${i}">Editar</button>
+        <button class="small-btn danger" data-del-card="${i}">Excluir</button>
+      </div>
+    </div>`).join('') || '<p class="empty">Nenhum cartão cadastrado.</p>';
+
+  $('peopleList').innerHTML = (cfg.pessoas || []).map((p, i) => `
+    <div class="setting-item">
+      <input data-person-rename="${i}" value="${esc(p)}" style="flex:1">
+      <button class="small-btn danger" data-del-person="${i}">Excluir</button>
+    </div>`).join('') || '<p class="empty">Nenhuma pessoa cadastrada.</p>';
+}
+
+async function saveCfg(next) {
+  cfg = next;
+  await setDoc(doc(db,'users',uid,'config','main'), cfg);
+  render();
+  renderSettings();
+}
+
+function openSettings() {
+  renderSettings();
+  $('settingsView').classList.remove('hide');
+}
+
+$('openSettings').onclick = openSettings;
+$('closeSettings').onclick = () => $('settingsView').classList.add('hide');
+
+$('addCategory').onclick = async () => {
+  const name = prompt('Nome da categoria:');
+  if (!name || !name.trim()) return;
+  const n = name.trim();
+  if ((cfg.categorias || []).some(x => x.toLowerCase() === n.toLowerCase())) return alert('Essa categoria já existe.');
+  await saveCfg({...cfg, categorias:[...(cfg.categorias || []), n]});
+};
+
+$('catsList').onclick = async e => {
+  const b = e.target.closest('button[data-del-cat]'); if (!b) return;
+  const i = Number(b.dataset.delCat);
+  const cats = [...(cfg.categorias || [])];
+  if (!confirm(`Excluir a categoria "${cats[i]}"? Lançamentos antigos não serão apagados.`)) return;
+  cats.splice(i,1);
+  await saveCfg({...cfg, categorias:cats});
+};
+$('catsList').onchange = async e => {
+  const inp = e.target.closest('input[data-cat-rename]'); if (!inp) return;
+  const i = Number(inp.dataset.catRename);
+  const cats = [...(cfg.categorias || [])];
+  const name = inp.value.trim();
+  if (!name) { inp.value = cats[i]; return; }
+  if (cats.some((x,j) => j !== i && x.toLowerCase() === name.toLowerCase())) { alert('Essa categoria já existe.'); inp.value = cats[i]; return; }
+  cats[i] = name;
+  await saveCfg({...cfg, categorias:cats});
+};
+
+$('addCard').onclick = async () => {
+  $('cardEditIndex').value = '';
+  $('cardName').value = '';
+  $('cardFee').value = '0';
+  $('cardPayer').value = '';
+  $('cardDialogTitle').textContent = 'Adicionar cartão';
+  $('cardDialog').showModal();
+};
+
+$('cardsList').onclick = async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const i = Number(b.dataset.editCard ?? b.dataset.delCard);
+  const cards = [...(cfg.cartoes || [])];
+  if (b.dataset.editCard !== undefined) {
+    const c = cards[i];
+    $('cardEditIndex').value = i;
+    $('cardName').value = c.nome || '';
+    $('cardFee').value = c.anuidade || 0;
+    $('cardPayer').value = c.paga || '';
+    $('cardDialogTitle').textContent = 'Editar cartão';
+    $('cardDialog').showModal();
+  } else {
+    if (!confirm(`Excluir o cartão "${cards[i].nome}"? Lançamentos antigos não serão apagados.`)) return;
+    cards.splice(i,1);
+    await saveCfg({...cfg, cartoes:cards});
+  }
+};
+
+$('cardCancel').onclick = () => $('cardDialog').close();
+$('cardSave').onclick = async () => {
+  const nome = $('cardName').value.trim();
+  const anuidade = parseFloat(String($('cardFee').value).replace(',','.')) || 0;
+  const paga = $('cardPayer').value.trim();
+  if (!nome) return alert('Informe o nome do cartão.');
+  const cards = [...(cfg.cartoes || [])];
+  const idx = $('cardEditIndex').value === '' ? -1 : Number($('cardEditIndex').value);
+  if (cards.some((c,i) => i !== idx && c.nome.toLowerCase() === nome.toLowerCase())) return alert('Esse cartão já existe.');
+  const item = {nome, anuidade: Math.max(0, anuidade), paga};
+  if (idx < 0) cards.push(item); else cards[idx] = item;
+  await saveCfg({...cfg, cartoes:cards});
+  $('cardDialog').close();
+};
+
+$('addPerson').onclick = async () => {
+  const name = prompt('Nome da pessoa:');
+  if (!name || !name.trim()) return;
+  const n = name.trim();
+  if ((cfg.pessoas || []).some(x => x.toLowerCase() === n.toLowerCase())) return alert('Essa pessoa já existe.');
+  await saveCfg({...cfg, pessoas:[...(cfg.pessoas || []), n]});
+};
+
+$('peopleList').onclick = async e => {
+  const b = e.target.closest('button[data-del-person]'); if (!b) return;
+  const i = Number(b.dataset.delPerson);
+  const people = [...(cfg.pessoas || [])];
+  if (!confirm(`Excluir "${people[i]}"? Lançamentos antigos não serão apagados.`)) return;
+  people.splice(i,1);
+  await saveCfg({...cfg, pessoas:people});
+};
+$('peopleList').onchange = async e => {
+  const inp = e.target.closest('input[data-person-rename]'); if (!inp) return;
+  const i = Number(inp.dataset.personRename);
+  const people = [...(cfg.pessoas || [])];
+  const name = inp.value.trim();
+  if (!name) { inp.value = people[i]; return; }
+  if (people.some((x,j) => j !== i && x.toLowerCase() === name.toLowerCase())) { alert('Essa pessoa já existe.'); inp.value = people[i]; return; }
+  people[i] = name;
+  await saveCfg({...cfg, pessoas:people});
+};
+
+// Ajusta a renderização para manter a tela de configurações atualizada quando o banco mudar.
+const originalRender = render;
+render = function() {
+  originalRender();
+  if (!$('settingsView').classList.contains('hide')) renderSettings();
+};
+
+</script>
+</body>
+</html>
